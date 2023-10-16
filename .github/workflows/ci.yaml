@@ -14,6 +14,10 @@ jobs:
       uses: beaujr/gogitops-action@v0.2
       with:
         github-actions-token: ${{secrets.GITHUB_TOKEN}}
+    permissions:
+      contents: write
+      id-token: write
+      packages: write
   build:
     runs-on: ubuntu-latest
     steps:
@@ -44,7 +48,7 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
-          password: ${{ secrets.CR_PAT }}
+          password: ${{ secrets.CR_PAT || secrets.GITHUB_TOKEN }}
       - name: Push to GitHub Packages
         uses: docker/build-push-action@v5
         with:

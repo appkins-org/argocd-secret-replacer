@@ -2,7 +2,7 @@ package vaultvaluesource
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"os"
 	"strings"
@@ -16,7 +16,22 @@ const (
 	defaultAuthPath    = "/auth/kubernetes/login/"
 )
 
-const argoPrefix = `ARGOCD_ENV_`
+const (
+	envCheck   = "VAULT_SESSION"
+	argoPrefix = "ARGOCD_ENV_"
+)
+
+// BwSession returns true of BW_SESSION or ARGOCD_ENV_BW_SESSION are set
+// If ARGOCD_ENV_BWSESSION is set the value is copied to BW_SESSION
+func VaultSession() bool {
+	val, got := os.LookupEnv(argoPrefix + envCheck)
+	if !got {
+		_, got = os.LookupEnv(envCheck)
+		return got
+	}
+	os.Setenv(envCheck, val)
+	return true
+}
 
 func getArgoEnv(name string, defaultVal string) string {
 	result, got := os.LookupEnv(argoPrefix + name)
@@ -46,7 +61,7 @@ func readJWT() (string, error) {
 	}
 	defer f.Close()
 
-	contentBytes, err := ioutil.ReadAll(f)
+	contentBytes, err := io.ReadAll(f)
 	if err != nil {
 		return "", err
 	}

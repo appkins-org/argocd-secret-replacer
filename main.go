@@ -3,14 +3,16 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"github.com/crumbhole/argocd-vault-replacer/src/bwvaluesource"
-	"github.com/crumbhole/argocd-vault-replacer/src/substitution"
-	"github.com/crumbhole/argocd-vault-replacer/src/vaultvaluesource"
-	"io/ioutil"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
 	"regexp"
+
+	"github.com/crumbhole/argocd-vault-replacer/src/bwvaluesource"
+	"github.com/crumbhole/argocd-vault-replacer/src/k8svaluesource"
+	"github.com/crumbhole/argocd-vault-replacer/src/substitution"
+	"github.com/crumbhole/argocd-vault-replacer/src/vaultvaluesource"
 )
 
 type scanner struct {
@@ -36,7 +38,7 @@ func (s *scanner) scanFile(path string, info os.FileInfo, err error) error {
 	}
 	fileRegexp := regexp.MustCompile(`\.ya?ml$`)
 	if fileRegexp.MatchString(path) {
-		filecontents, err := ioutil.ReadFile(path)
+		filecontents, err := os.ReadFile(path)
 		if err != nil {
 			return err
 		}
@@ -57,7 +59,10 @@ func selectValueSource() substitution.ValueSource {
 	if bwvaluesource.BwSession() {
 		return bwvaluesource.BitwardenValueSource{}
 	}
-	return vaultvaluesource.VaultValueSource{}
+	if vaultvaluesource.VaultSession() {
+		return vaultvaluesource.VaultValueSource{}
+	}
+	return k8svaluesource.KubernetesValueSource{}
 }
 
 func copyEnv() {
@@ -75,7 +80,7 @@ func main() {
 	s := scanner{source: selectValueSource()}
 	if (stat.Mode() & os.ModeCharDevice) == 0 {
 		reader := bufio.NewReader(os.Stdin)
-		filecontents, err := ioutil.ReadAll(reader)
+		filecontents, err := io.ReadAll(reader)
 		if err != nil {
 			log.Fatal(err)
 		}
